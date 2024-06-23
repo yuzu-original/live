@@ -1,5 +1,5 @@
-#ifndef LIVE_MAIN_H_
-#define LIVE_MAIN_H_
+#ifndef GAME_H_
+#define GAME_H_
 
 #define SCREEN_WIDTH  1280
 #define SCREEN_HEIGHT 720
