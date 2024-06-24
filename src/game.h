@@ -1,6 +1,8 @@
 #ifndef GAME_H_
 #define GAME_H_
 
+#include <stdbool.h>
+
 #define SCREEN_WIDTH  1280
 #define SCREEN_HEIGHT 720
 
@@ -9,10 +11,48 @@
 
 #define CELL_SIZE 32
 
-#define CHROMOSOME_SIZE = 10;
+#define GENES_COUNT 10
+#define HEALTH_MAX 100
+
+typedef enum {
+    DIR_LEFT = 0,
+    DIR_RIGHT,
+    DIR_UP,
+    DIR_DOWN,
+    DIR_COUNT,
+} Dir;
+
+typedef enum {
+    CONDITION_ALWAYS = 0,
+    CONDITION_FRONT_IS_FREE,
+    CONDITION_LEFT_IS_FREE,
+    CONDITION_RIGHT_IS_FREE,
+    CONDITION_COUNT,
+} Condition;
+
+typedef enum {
+    ACTION_DO_NOTHING = 0,
+    ACTION_MOVE,
+    ACTION_EAT,
+    ACTION_TURN_LEFT,
+    ACTION_TURN_RIGHT,
+    ACTION_COUNT,
+} Action;
 
 typedef struct {
+    Condition cond;
+    Action action1; // if cond is true
+    int next1; // if cond is true
+    Action action2; // if cond is false
+    int next2; // if cond is false
+} Gene;
+
+typedef struct {
+    Gene genes[GENES_COUNT];
+    Dir dir;
     int health;
+    int geneIndex;
+    bool wasUpdated;
 } Agent;
 
 typedef struct {
