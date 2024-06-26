@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 char *DirToStr(Dir dir) {
     switch (dir) {
@@ -29,7 +30,7 @@ char *ConditionToStr(Condition cond) {
 char *ActionToStr(Action action) {
     switch (action) {
         case ACTION_MOVE: return "ACTION_MOVE";
-        case ACTION_EAT: return "ACTION_EAT";
+        case ACTION_ATTACK: return "ACTION_ATTACK";
         case ACTION_DO_NOTHING: return "ACTION_DO_NOTHING";
         case ACTION_TURN_LEFT: return "ACTION_TURN_LEFT";
         case ACTION_TURN_RIGHT: return "ACTION_TURN_RIGHT";
@@ -127,7 +128,9 @@ Agent *RandomAgent(void) {
 
 Vector2 ToBoardPos(Vector2 pos) {
     pos.x = (int)pos.x % BOARD_WIDTH;
+    if (pos.x < 0) pos.x += BOARD_WIDTH;
     pos.y = (int)pos.y % BOARD_HEIGHT;
+    if (pos.y < 0) pos.y += BOARD_HEIGHT;
     return pos;
 }
 
@@ -187,7 +190,18 @@ void ExecuteAction(Game *game, Agent *agent, Vector2 pos, Action action) {
         case ACTION_TURN_RIGHT: {
             agent->dir = TurnRight(agent->dir);
         } break;
-        // TODO: add more actions
+        case ACTION_ATTACK: {
+            Vector2 front = GetFrontPos(agent->dir, pos);
+            int fx = (int)front.x;
+            int fy = (int)front.y;
+            if (game->agents[fy][fx] != NULL) {
+                game->agents[fy][fx]->health -= 10;
+                if (game->agents[fy][fx]->health <= 0) {
+                    free(game->agents[fy][fx]);
+                    game->agents[fy][fx] = NULL;
+                }
+            }
+        } break;
         default: break;
     }
 }
@@ -237,6 +251,7 @@ void InitGame(Game *game) {
 }
 
 int main(void) {
+    SetRandomSeed(time(0));
     Game game = {NULL};
     InitGame(&game);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);

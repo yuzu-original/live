@@ -32,7 +32,7 @@ typedef enum {
 typedef enum {
     ACTION_DO_NOTHING = 0,
     ACTION_MOVE,
-    ACTION_EAT,
+    ACTION_ATTACK,
     ACTION_TURN_LEFT,
     ACTION_TURN_RIGHT,
     ACTION_COUNT,
