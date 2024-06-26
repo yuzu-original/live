@@ -19,7 +19,6 @@ typedef enum {
     DIR_RIGHT,
     DIR_UP,
     DIR_DOWN,
-    DIR_COUNT,
 } Dir;
 
 typedef enum {
@@ -56,7 +55,7 @@ typedef struct {
 } Agent;
 
 typedef struct {
-    Agent agents[BOARD_HEIGHT][BOARD_WIDTH];
+    Agent *agents[BOARD_HEIGHT][BOARD_WIDTH];
     int foods[BOARD_HEIGHT][BOARD_WIDTH];
     int walls[BOARD_HEIGHT][BOARD_WIDTH];
 } Game;
