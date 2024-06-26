@@ -3,7 +3,6 @@
 #include "raymath.h"
 #include <stdlib.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <string.h>
 #include <time.h>
 
@@ -154,6 +153,28 @@ Vector2 GetFrontPos(Dir dir, Vector2 pos) {
     return ToBoardPos(pos);
 }
 
+Vector2 GetLeftPos(Dir dir, Vector2 pos) {
+    switch (dir) {
+        case DIR_UP: pos.x--; break;
+        case DIR_DOWN: pos.x++; break;
+        case DIR_LEFT: pos.y++; break;
+        case DIR_RIGHT: pos.y--; break;
+        default: break;
+    }
+    return ToBoardPos(pos);
+}
+
+Vector2 GetRightPos(Dir dir, Vector2 pos) {
+    switch (dir) {
+        case DIR_UP: pos.x++; break;
+        case DIR_DOWN: pos.x--; break;
+        case DIR_LEFT: pos.y--; break;
+        case DIR_RIGHT: pos.y++; break;
+        default: break;
+    }
+    return ToBoardPos(pos);
+}
+
 Dir TurnLeft(Dir dir) {
     switch (dir) {
         case DIR_LEFT: return DIR_DOWN;
@@ -207,8 +228,12 @@ void ExecuteAction(Game *game, Agent *agent, Vector2 pos, Action action) {
 }
 
 bool ExecuteCondition(Game *game, Agent *agent, Vector2 pos, Condition cond) {
-    // TODO make condition check
-    return true;
+    switch (cond) {
+        case CONDITION_ALWAYS: return true;
+        case CONDITION_LEFT_IS_FREE: return IsCellFree(game, GetLeftPos(agent->dir, pos));
+        case CONDITION_RIGHT_IS_FREE: return IsCellFree(game, GetRightPos(agent->dir, pos));
+        default: return true;
+    }
 }
 
 void UpdateAgent(Game *game, Agent *agent, Vector2 pos) {
