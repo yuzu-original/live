@@ -37,6 +37,10 @@ char *ActionToStr(Action action) {
     }
 }
 
+void DrawWall(Vector2 pos) {
+    DrawRectanglePro((Rectangle){pos.x*CELL_SIZE, pos.y*CELL_SIZE, CELL_SIZE, CELL_SIZE}, (Vector2){-0.5f, -0.5f}, 0, GRAY);
+}
+
 void DrawAgent(Vector2 pos, Agent *agent) {
     float startAngle = 0;
     switch (agent->dir) {
@@ -92,7 +96,9 @@ void DrawGame(Game *game, Camera2D *camera) {
     for (int y = 0; y < BOARD_HEIGHT; y++) {
         for (int x = 0; x < BOARD_WIDTH; x++) {
             if (game->agents[y][x] != NULL) {
-                DrawAgent((Vector2) {x, y}, game->agents[y][x]);
+                DrawAgent((Vector2){x, y}, game->agents[y][x]);
+            } else if (game->walls[y][x] != 0) {
+                DrawWall((Vector2){x, y});
             }
         }
     }
@@ -271,6 +277,14 @@ void InitGame(Game *game) {
     for (int y = 0; y < BOARD_HEIGHT; y += step) {
         for (int x = 0; x < BOARD_WIDTH; x += step) {
             game->agents[y][x] = RandomAgent();
+        }
+    }
+
+    for (int y = 0; y < BOARD_HEIGHT; y++) {
+        for (int x = 0; x < BOARD_WIDTH; x++) {
+            if (IsCellFree(game, (Vector2){x, y}) && GetRandomValue(0, 100) <= 10) {
+                game->walls[y][x] = 1;
+            }
         }
     }
 }
