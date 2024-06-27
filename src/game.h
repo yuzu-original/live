@@ -6,13 +6,14 @@
 #define SCREEN_WIDTH  1280
 #define SCREEN_HEIGHT 720
 
-#define BOARD_WIDTH  100
+#define BOARD_WIDTH  200
 #define BOARD_HEIGHT 100
 
 #define CELL_SIZE 32
 
 #define GENES_COUNT 10
 #define HEALTH_MAX 100
+#define BEST_GENES_COUNT 50
 
 typedef enum {
     DIR_LEFT = 0,
@@ -70,6 +71,9 @@ typedef struct {
     Agent *agents[BOARD_HEIGHT][BOARD_WIDTH];
     int foods[BOARD_HEIGHT][BOARD_WIDTH];
     int walls[BOARD_HEIGHT][BOARD_WIDTH];
+    Gene bestGenes[BEST_GENES_COUNT][GENES_COUNT];
+    int bestGenesCount;
+    bool allDie;
 } Game;
 
 #endif

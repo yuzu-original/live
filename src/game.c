@@ -1,6 +1,7 @@
 #include "game.h"
 #include "raylib.h"
 #include "raymath.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
@@ -160,20 +161,44 @@ Dir GetReverseDir(Dir dir) {
     }
 }
 
+void KillAgent(Game *game, Agent *agent, Vector2 pos) {
+    // shift by 1 element to right
+    memmove(&game->bestGenes[1], &game->bestGenes[0], (BEST_GENES_COUNT-1)*GENES_COUNT*sizeof(Gene));
+    // set first element to curent genes
+    memcpy(&game->bestGenes[0], &agent->genes, GENES_COUNT*sizeof(Gene));
+    
+    game->bestGenesCount = Clamp(game->bestGenesCount+1, 0, BEST_GENES_COUNT);
+
+    game->foods[(int)pos.y][(int)pos.x] = (agent->hunger > 10) ? agent->hunger : 10;
+    
+    free(agent);
+    game->agents[(int)pos.y][(int)pos.x] = NULL;
+}
+
 Agent *ReproduceAgent(Agent *parent) {
     Agent *a = malloc(sizeof(Agent));
     a->dir = GetReverseDir(parent->dir);
     a->health = HEALTH_MAX;
     a->hunger = parent->hunger/2;
     parent->hunger /= 2;
+    a->health = parent->health;
     a->geneIndex = GetRandomValue(0, GENES_COUNT-1);
     for (size_t i = 0; i < GENES_COUNT; i++) {
-        // TODO: add mutation
         a->genes[i].cond = parent->genes[i].cond;
         a->genes[i].action1 = parent->genes[i].action1;
         a->genes[i].action2 = parent->genes[i].action2;
         a->genes[i].next1 = parent->genes[i].next1;
         a->genes[i].next2 = parent->genes[i].next2;
+        if (GetRandomValue(0, 100) <= 10) {
+            int m = GetRandomValue(0, 4); // cond, action1, action2, ...
+            switch (m) {
+                case 0: a->genes[i].cond = RandomCondition(); break;
+                case 1: a->genes[i].action1 = RandomAction(); break;
+                case 2: a->genes[i].action2 = RandomAction(); break;
+                case 3: a->genes[i].next1 = GetRandomValue(0, GENES_COUNT-1); break;
+                case 4: a->genes[i].next2 = GetRandomValue(0, GENES_COUNT-1); break;
+            }
+        }
     }
     return a;
 }
@@ -282,8 +307,7 @@ void ExecuteAction(Game *game, Agent *agent, Vector2 pos, Action action) {
             if (game->agents[fy][fx] != NULL) {
                 game->agents[fy][fx]->health -= 10;
                 if (game->agents[fy][fx]->health <= 0) {
-                    free(game->agents[fy][fx]);
-                    game->agents[fy][fx] = NULL;
+                    KillAgent(game, agent, pos);
                 }
             }
         } break;
@@ -292,15 +316,15 @@ void ExecuteAction(Game *game, Agent *agent, Vector2 pos, Action action) {
             int fx = (int)front.x;
             int fy = (int)front.y;
             if (game->foods[fy][fx] != 0) {
+                agent->hunger += game->foods[fy][fx];
                 game->foods[fy][fx] = 0;
-                agent->hunger += 50;
             }
         } break;
         case ACTION_REPRODUCE: {
             Vector2 back = GetBackPos(agent->dir, pos);
             int bx = (int)back.x;
             int by = (int)back.y;
-            if (agent->health > HEALTH_MAX/2 && IsCellFree(game, back)) {
+            if (IsCellFree(game, back)) {
                 game->agents[by][bx] = ReproduceAgent(agent);
             }
         } break;
@@ -356,13 +380,12 @@ bool ExecuteCondition(Game *game, Agent *agent, Vector2 pos, Condition cond) {
 
 void UpdateAgent(Game *game, Agent *agent, Vector2 pos) {
     agent->wasUpdated = true;
-    agent->hunger -= 10;
+    agent->hunger -= 5;
     if (agent->hunger < 0) {
         agent->hunger = 0;
         agent->health -= 10;
         if (agent->health <= 0) {
-            free(agent);
-            game->agents[(int)pos.y][(int)pos.x] = NULL;
+            KillAgent(game, agent, pos);
             return;
         }
     }
@@ -383,10 +406,26 @@ void StepGame(Game *game) {
             }
         }
     }
+    game->allDie = true;
     for (int y = 0; y < BOARD_HEIGHT; y++) {
         for (int x = 0; x < BOARD_WIDTH; x++) {
             if (game->agents[y][x] != NULL) {
                 game->agents[y][x]->wasUpdated = false;
+                game->allDie = false;
+            }
+        }
+    }
+}
+
+void CreateWallsAndFoods(Game *game) {
+    for (int y = 0; y < BOARD_HEIGHT; y++) {
+        for (int x = 0; x < BOARD_WIDTH; x++) {
+            if (IsCellFree(game, (Vector2){x, y})) {
+                if (GetRandomValue(0, 100) <= 1) {
+                    game->walls[y][x] = 1;
+                } else if (GetRandomValue(0, 100) <= 30) {
+                    game->foods[y][x] = 50;
+                }
             }
         }
     }
@@ -401,23 +440,46 @@ void InitGame(Game *game) {
             game->agents[y][x] = RandomAgent();
         }
     }
+    
+    CreateWallsAndFoods(game);
+}
 
-    for (int y = 0; y < BOARD_HEIGHT; y++) {
-        for (int x = 0; x < BOARD_WIDTH; x++) {
-            if (IsCellFree(game, (Vector2){x, y})) {
-                if (GetRandomValue(0, 100) <= 10) {
-                    game->walls[y][x] = 1;
-                } else if (GetRandomValue(0, 100) <= 20) {
-                    game->foods[y][x] = 1;
-                }
+Agent *AgentFromGenes(Gene genes[GENES_COUNT]) {
+    Agent *a = malloc(sizeof(Agent));
+    a->dir = RandomDir();
+    a->health = HEALTH_MAX;
+    a->hunger = 100;
+    a->geneIndex = GetRandomValue(0, GENES_COUNT - 1);
+    for (size_t i = 0; i < GENES_COUNT; i++) {
+        a->genes[i] = genes[i];
+    }
+    return a;
+}
+
+void ReinitGame(Game *game) {
+    Gene bestGenes[BEST_GENES_COUNT][GENES_COUNT];
+    memcpy(bestGenes, game->bestGenes, BEST_GENES_COUNT*GENES_COUNT*sizeof(Gene));
+    int bestGenesCount = game->bestGenesCount;
+
+    memset(game, 0, sizeof(*game));
+
+    int step = 3;
+    for (int y = 0; y < BOARD_HEIGHT; y += step) {
+        for (int x = 0; x < BOARD_WIDTH; x += step) {
+            if (GetRandomValue(0, 100) <= 70) {
+                game->agents[y][x] = AgentFromGenes(bestGenes[GetRandomValue(0, bestGenesCount-1)]);
+            } else {
+                game->agents[y][x] = RandomAgent();
             }
         }
-    }
+    } 
+
+    CreateWallsAndFoods(game);
 }
 
 int main(void) {
     SetRandomSeed(time(0));
-    Game game = {NULL};
+    Game game = {0};
     InitGame(&game);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Live");
@@ -453,8 +515,10 @@ int main(void) {
         }
 
         if (IsKeyDown(KEY_SPACE)) {
+            if (game.allDie) ReinitGame(&game);
             StepGame(&game);
         } else if (IsKeyPressed(KEY_ENTER)) {
+            if (game.allDie) ReinitGame(&game);
             StepGame(&game);
         }
 
