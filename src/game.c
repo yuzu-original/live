@@ -41,6 +41,10 @@ void DrawWall(Vector2 pos) {
     DrawRectanglePro((Rectangle){pos.x*CELL_SIZE, pos.y*CELL_SIZE, CELL_SIZE, CELL_SIZE}, (Vector2){-0.5f, -0.5f}, 0, GRAY);
 }
 
+void DrawFood(Vector2 pos) {
+    DrawCircleV(Vector2Scale(Vector2AddValue(pos, 0.5), CELL_SIZE), CELL_SIZE/4.0f, ORANGE);
+}
+
 void DrawAgent(Vector2 pos, Agent *agent) {
     float startAngle = 0;
     switch (agent->dir) {
@@ -100,6 +104,8 @@ void DrawGame(Game *game, Camera2D *camera) {
                 DrawAgent((Vector2){x, y}, game->agents[y][x]);
             } else if (game->walls[y][x] != 0) {
                 DrawWall((Vector2){x, y});
+            } else if (game->foods[y][x] != 0) {
+                DrawFood((Vector2){x, y});
             }
         }
     }
@@ -294,8 +300,12 @@ void InitGame(Game *game) {
 
     for (int y = 0; y < BOARD_HEIGHT; y++) {
         for (int x = 0; x < BOARD_WIDTH; x++) {
-            if (IsCellFree(game, (Vector2){x, y}) && GetRandomValue(0, 100) <= 10) {
-                game->walls[y][x] = 1;
+            if (IsCellFree(game, (Vector2){x, y})) {
+                if (GetRandomValue(0, 100) <= 10) {
+                    game->walls[y][x] = 1;
+                } else if (GetRandomValue(0, 100) <= 20) {
+                    game->foods[y][x] = 1;
+                }
             }
         }
     }
