@@ -61,8 +61,9 @@ void DrawAgent(Vector2 pos, Agent *agent) {
 
 void DrawAgentInfo(Agent *agent, Vector2 pos) {
     DrawText(TextFormat("Health: %d", agent->health), pos.x, pos.y, 20, WHITE);
-    DrawText(TextFormat("Dir: %s", DirToStr(agent->dir)), pos.x, pos.y + 20, 20, WHITE);
-    DrawText(TextFormat("Gene index: %d", agent->geneIndex), pos.x, pos.y + 40, 20, WHITE);
+    DrawText(TextFormat("Hunger: %d", agent->hunger), pos.x, pos.y + 20, 20, WHITE);
+    DrawText(TextFormat("Dir: %s", DirToStr(agent->dir)), pos.x, pos.y + 40, 20, WHITE);
+    DrawText(TextFormat("Gene index: %d", agent->geneIndex), pos.x, pos.y + 60, 20, WHITE);
     for (size_t i = 0; i < GENES_COUNT; i++) {
         DrawText(TextFormat(
             "Gene %d: %s %s %d %s %d",
@@ -72,7 +73,7 @@ void DrawAgentInfo(Agent *agent, Vector2 pos) {
             agent->genes[i].next1,
             ActionToStr(agent->genes[i].action2),
             agent->genes[i].next2
-       ), pos.x, pos.y+60+i*20, 20, (agent->geneIndex == i) ? PINK : WHITE);
+       ), pos.x, pos.y+80+i*20, 20, (agent->geneIndex == i) ? PINK : WHITE);
     }
 }
 
@@ -120,6 +121,7 @@ Agent *RandomAgent(void) {
     Agent *a = malloc(sizeof(Agent));
     a->dir = RandomDir();
     a->health = HEALTH_MAX;
+    a->hunger = 100;
     a->geneIndex = GetRandomValue(0, GENES_COUNT-1);
     for (size_t i = 0; i < GENES_COUNT; i++) {
         a->genes[i].cond = RandomCondition();
@@ -244,6 +246,16 @@ bool ExecuteCondition(Game *game, Agent *agent, Vector2 pos, Condition cond) {
 
 void UpdateAgent(Game *game, Agent *agent, Vector2 pos) {
     agent->wasUpdated = true;
+    agent->hunger -= 10;
+    if (agent->hunger <= 0) {
+        agent->hunger = 0;
+        agent->health -= 10;
+        if (agent->health <= 0) {
+            free(agent);
+            game->agents[(int)pos.y][(int)pos.x] = NULL;
+            return;
+        }
+    }
     if (ExecuteCondition(game, agent, pos, agent->genes[agent->geneIndex].cond)) {
         ExecuteAction(game, agent, pos, agent->genes[agent->geneIndex].action1);
         agent->geneIndex = agent->genes[agent->geneIndex].next1;

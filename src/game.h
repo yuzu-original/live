@@ -50,6 +50,7 @@ typedef struct {
     Gene genes[GENES_COUNT];
     Dir dir;
     int health;
+    int hunger;
     int geneIndex;
     bool wasUpdated;
 } Agent;
