@@ -22,6 +22,15 @@ char *ConditionToStr(Condition cond) {
         case CONDITION_LEFT_IS_FREE: return "CONDITION_LEFT_IS_FREE";
         case CONDITION_RIGHT_IS_FREE: return "CONDITION_RIGHT_IS_FREE";
         case CONDITION_FRONT_IS_FREE: return "CONDITION_FRONT_IS_FREE";
+        case CONDITION_FOOD_IN_FRONT: return "CONDITION_FOOD_IN_FRONT";
+        case CONDITION_FOOD_ON_LEFT: return "CONDITION_FOOD_ON_LEFT";
+        case CONDITION_FOOD_ON_RIGHT: return "CONDITION_FOOD_ON_RIGHT";
+        case CONDITION_AGENT_IN_FRONT: return "CONDITION_AGENT_IN_FRONT";
+        case CONDITION_AGENT_ON_LEFT: return "CONDITION_AGENT_ON_LEFT";
+        case CONDITION_AGENT_ON_RIGHT: return "CONDITION_AGENT_ON_RIGHT";
+        case CONDITION_WALL_IN_FRONT: return "CONDITION_WALL_IN_FRONT";
+        case CONDITION_WALL_ON_LEFT: return "CONDITION_WALL_ON_LEFT";
+        case CONDITION_WALL_ON_RIGHT: return "CONDITION_WALL_ON_RIGHT";
         default: return "";
     }
 }
@@ -30,6 +39,7 @@ char *ActionToStr(Action action) {
     switch (action) {
         case ACTION_MOVE: return "ACTION_MOVE";
         case ACTION_ATTACK: return "ACTION_ATTACK";
+        case ACTION_EAT: return "ACTION_EAT";
         case ACTION_DO_NOTHING: return "ACTION_DO_NOTHING";
         case ACTION_TURN_LEFT: return "ACTION_TURN_LEFT";
         case ACTION_TURN_RIGHT: return "ACTION_TURN_RIGHT";
@@ -237,6 +247,15 @@ void ExecuteAction(Game *game, Agent *agent, Vector2 pos, Action action) {
                 }
             }
         } break;
+        case ACTION_EAT: {
+            Vector2 front = GetFrontPos(agent->dir, pos);
+            int fx = (int)front.x;
+            int fy = (int)front.y;
+            if (game->foods[fy][fx] != 0) {
+                game->foods[fy][fx] = 0;
+                agent->hunger += 50;
+            }
+        } break;
         default: break;
     }
 }
@@ -244,8 +263,45 @@ void ExecuteAction(Game *game, Agent *agent, Vector2 pos, Action action) {
 bool ExecuteCondition(Game *game, Agent *agent, Vector2 pos, Condition cond) {
     switch (cond) {
         case CONDITION_ALWAYS: return true;
+        case CONDITION_FRONT_IS_FREE: return IsCellFree(game, GetFrontPos(agent->dir, pos));
         case CONDITION_LEFT_IS_FREE: return IsCellFree(game, GetLeftPos(agent->dir, pos));
         case CONDITION_RIGHT_IS_FREE: return IsCellFree(game, GetRightPos(agent->dir, pos));
+        case CONDITION_FOOD_IN_FRONT: {
+            Vector2 front = GetFrontPos(agent->dir, pos);
+            return game->foods[(int)front.y][(int)front.x] != 0;
+        };
+        case CONDITION_FOOD_ON_LEFT: {
+            Vector2 left = GetLeftPos(agent->dir, pos);
+            return game->foods[(int)left.y][(int)left.x] != 0;
+        };
+        case CONDITION_FOOD_ON_RIGHT: {
+            Vector2 right = GetRightPos(agent->dir, pos);
+            return game->foods[(int)right.y][(int)right.x] != 0;
+        };
+        case CONDITION_AGENT_IN_FRONT: {
+            Vector2 front = GetFrontPos(agent->dir, pos);
+            return game->agents[(int)front.y][(int)front.x] != NULL;
+        };
+        case CONDITION_AGENT_ON_LEFT: {
+            Vector2 left = GetLeftPos(agent->dir, pos);
+            return game->agents[(int)left.y][(int)left.x] != NULL;
+        };
+        case CONDITION_AGENT_ON_RIGHT: {
+            Vector2 right = GetRightPos(agent->dir, pos);
+            return game->agents[(int)right.y][(int)right.x] != NULL;
+        };
+        case CONDITION_WALL_IN_FRONT: {
+            Vector2 front = GetFrontPos(agent->dir, pos);
+            return game->walls[(int)front.y][(int)front.x] != 0;
+        };
+        case CONDITION_WALL_ON_LEFT: {
+            Vector2 left = GetLeftPos(agent->dir, pos);
+            return game->walls[(int)left.y][(int)left.x] != 0;
+        };
+        case CONDITION_WALL_ON_RIGHT: {
+            Vector2 right = GetRightPos(agent->dir, pos);
+            return game->walls[(int)right.y][(int)right.x] != 0;
+        };
         default: return true;
     }
 }
@@ -253,7 +309,7 @@ bool ExecuteCondition(Game *game, Agent *agent, Vector2 pos, Condition cond) {
 void UpdateAgent(Game *game, Agent *agent, Vector2 pos) {
     agent->wasUpdated = true;
     agent->hunger -= 10;
-    if (agent->hunger <= 0) {
+    if (agent->hunger < 0) {
         agent->hunger = 0;
         agent->health -= 10;
         if (agent->health <= 0) {
