@@ -43,6 +43,7 @@ char *ActionToStr(Action action) {
         case ACTION_DO_NOTHING: return "ACTION_DO_NOTHING";
         case ACTION_TURN_LEFT: return "ACTION_TURN_LEFT";
         case ACTION_TURN_RIGHT: return "ACTION_TURN_RIGHT";
+        case ACTION_REPRODUCE: return "ACTION_REPRODUCE";
         default: return "";
     }
 }
@@ -149,6 +150,34 @@ Agent *RandomAgent(void) {
     return a;
 }
 
+Dir GetReverseDir(Dir dir) {
+    switch (dir) {
+        case DIR_LEFT: return DIR_RIGHT;
+        case DIR_DOWN: return DIR_UP;
+        case DIR_RIGHT: return DIR_LEFT;
+        case DIR_UP: return DIR_DOWN;
+        default: return 0;
+    }
+}
+
+Agent *ReproduceAgent(Agent *parent) {
+    Agent *a = malloc(sizeof(Agent));
+    a->dir = GetReverseDir(parent->dir);
+    a->health = HEALTH_MAX;
+    a->hunger = parent->hunger/2;
+    parent->hunger /= 2;
+    a->geneIndex = GetRandomValue(0, GENES_COUNT-1);
+    for (size_t i = 0; i < GENES_COUNT; i++) {
+        // TODO: add mutation
+        a->genes[i].cond = parent->genes[i].cond;
+        a->genes[i].action1 = parent->genes[i].action1;
+        a->genes[i].action2 = parent->genes[i].action2;
+        a->genes[i].next1 = parent->genes[i].next1;
+        a->genes[i].next2 = parent->genes[i].next2;
+    }
+    return a;
+}
+
 Vector2 ToBoardPos(Vector2 pos) {
     pos.x = (int)pos.x % BOARD_WIDTH;
     if (pos.x < 0) pos.x += BOARD_WIDTH;
@@ -172,6 +201,17 @@ Vector2 GetFrontPos(Dir dir, Vector2 pos) {
         case DIR_DOWN: pos.y++; break;
         case DIR_LEFT: pos.x--; break;
         case DIR_RIGHT: pos.x++; break;
+        default: break;
+    }
+    return ToBoardPos(pos);
+}
+
+Vector2 GetBackPos(Dir dir, Vector2 pos) {
+    switch (dir) {
+        case DIR_UP: pos.y++; break;
+        case DIR_DOWN: pos.y--; break;
+        case DIR_LEFT: pos.x++; break;
+        case DIR_RIGHT: pos.x--; break;
         default: break;
     }
     return ToBoardPos(pos);
@@ -254,6 +294,14 @@ void ExecuteAction(Game *game, Agent *agent, Vector2 pos, Action action) {
             if (game->foods[fy][fx] != 0) {
                 game->foods[fy][fx] = 0;
                 agent->hunger += 50;
+            }
+        } break;
+        case ACTION_REPRODUCE: {
+            Vector2 back = GetBackPos(agent->dir, pos);
+            int bx = (int)back.x;
+            int by = (int)back.y;
+            if (agent->health > HEALTH_MAX/2 && IsCellFree(game, back)) {
+                game->agents[by][bx] = ReproduceAgent(agent);
             }
         } break;
         default: break;

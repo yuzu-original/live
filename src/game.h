@@ -45,6 +45,7 @@ typedef enum {
     ACTION_EAT,
     ACTION_TURN_LEFT,
     ACTION_TURN_RIGHT,
+    ACTION_REPRODUCE,
     ACTION_COUNT,
 } Action;
 
